@@ -1,0 +1,22 @@
+# Cloudflare Pages 安全头配置（§8.4）
+# 部署到 CF Pages 时自动应用
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: "1; mode=block"
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.workers.dev; img-src 'self' data: blob:; font-src 'self' https://api.iconify.design; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+# 缓存策略：静态资源长期缓存（带 hash 名）
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML 文件不缓存（总是获取最新）
+/index.html
+  Cache-Control: no-cache
+
+# favicon 短期缓存
+/favicon.svg
+  Cache-Control: public, max-age=86400

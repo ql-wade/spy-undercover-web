@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6C5CE7;
+  --color-primary-light: #A29BFE;
+  --color-success: #00B894;
+  --color-danger: #E17055;
+  --color-warning: #FDCB6E;
+  --color-bg-light: #F8F9FA;
+  --color-bg-dark: #1A1A2E;
+  --color-surface-dark: #16213E;
+  --color-surface-light: #FFFFFF;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #B0B0C0;
+  --color-text-muted: #6C6C80;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+
+  --radius-card: 16px;
+  --radius-btn: 12px;
+  --radius-input: 8px;
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-card-dark: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 全局基础样式 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-primary);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* 3D 翻牌动画 */
+.perspective {
+  perspective: 1000px;
+}
+
+.card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease-in-out;
+}
+
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .card-inner {
+    transition: none;
+  }
+  .card-inner.flipped {
+    transform: none;
+  }
+  .card-face {
+    backface-visibility: visible;
+    -webkit-backface-visibility: visible;
+  }
+  .card-back {
+    display: none;
+  }
+}
+
+/* ========== 性能优化（§8.1）========== */
+
+/* GPU 加速层：确保动画属性使用 compositing only */
+.gpu-accelerated {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* 动画结束后移除 will-change，避免占用过多内存 */
+@media (prefers-reduced-motion: reduce) {
+  .gpu-accelerated {
+    will-change: auto;
+  }
+}
+
+/* 文本渲染优化 */
+text {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 隐藏焦点环（鼠标操作时），保留键盘焦点（可访问性） */
+.focus-visible-only:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ========== 安全措施（§8.4）========== */
+
+/* 禁止文本选中区域（游戏交互区）*/
+.secure-no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  /* 防止触控高亮 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  border-radius: 2px;
+}
+
+/* 防止文字选中（游戏操作时） */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ========== 页面切换动画（替代 Framer Motion AnimatePresence）========== */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

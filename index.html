@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- 视口配置：禁止缩放（移动端游戏场景） -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- 主题色（匹配深色主题） -->
+    <meta name="theme-color" content="#1A1A2E" />
+
+    <!-- ========== 安全 Meta 标签（§8.4）========== -->
+
+    <!-- CSP: Content Security Policy（第一道防线，CF Pages _headers 为第二道） -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.workers.dev; img-src 'self' data: blob:; font-src 'self' https://api.iconify.design; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+
+    <!-- 防止 MIME 类型嗅探 -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- 防止点击劫持 -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+
+    <!-- XSS 保护 -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+
+    <!-- Referrer 策略 -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- 权限策略：禁止不必要的 API -->
+    <meta name="permissions-policy" content="camera=(), microphone=(), geolocation=()" />
+
+    <!-- ========== 性能优化（§8.1）========== -->
+
+    <!-- DNS 预解析（CF Workers API 域名，预留） -->
+    <link rel="dns-prefetch" href="//api.spy-undercover.workers.dev" />
+
+    <!-- 预连接（减少 TLS 握手时间） -->
+    <link rel="preconnect" href="https://api.iconify.design" crossorigin />
+
+    <!-- 标题 -->
+    <title>谁是卧底 · 发牌助手</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- ES module 入口（支持原生 importmap 的浏览器会预扫描） -->
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- === 降级体验：禁用 JS 时提示 === -->
+    <noscript>
+      <div style="padding:2rem;text-align:center;font-family:system-ui;">
+        <h1>⚠️ 需要 JavaScript</h1>
+        <p>谁是卧底发牌助手需要启用 JavaScript 才能运行。</p>
+      </div>
+    </noscript>
+  </body>
+</html>
