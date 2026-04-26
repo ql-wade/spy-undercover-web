@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>谁是卧底 - 发牌助手</title>
+<style>
+/* ========== Reset & Base ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #6C5CE7;
+  --primary-light: #a29bfe;
+  --primary-dark: #5a4bd1;
+  --bg-dark: #0f0a1e;
+  --bg-card: #1a1333;
+  --bg-card-back: linear-gradient(135deg, #6C5CE7, #a29bfe);
+  --text-primary: #ffffff;
+  --text-secondary: #b0aac8;
+  --accent-cyan: #00cec9;
+  --accent-pink: #fd79a8;
+  --accent-yellow: #ffeaa7;
+  --danger: #e17055;
+  --success: #00b894;
+  --radius: 16px;
+  --flip-duration: 600ms;
+  --shadow-glow: 0 0 30px rgba(108,92,231,0.3);
+  --font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+}
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font-stack);
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== App Container ========== */
+.app { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; }
+
+/* ========== Views ========== */
+.view {
+  display: none;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 20px 16px 100px;
+  animation: fadeIn 0.3s ease;
+}
+.view.active { display: flex; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ========== Header ========== */
+.header {
+  text-align: center;
+  padding: 40px 0 32px;
+  flex-shrink: 0;
+}
+.header-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+  display: block;
+  filter: drop-shadow(0 4px 20px rgba(108,92,231,0.5));
+}
+.header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary-light), var(--accent-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+}
+.header p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* ========== Mode Selection (Home) ========== */
+.mode-section { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+.mode-label {
+  font-size: 15px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mode-card {
+  background: var(--bg-card);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.mode-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(108,92,231,0.1), rgba(0,206,201,0.05));
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.mode-card:hover::before, .mode-card.selected::before { opacity: 1; }
+.mode-card.selected {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-glow);
+}
+.mode-card .mode-icon { font-size: 40px; display: block; margin-bottom: 8px; }
+.mode-card .mode-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.mode-card .mode-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+.mode-check {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: none;
+  align-items: center; justify-content: center;
+  font-size: 13px;
+}
+.mode-card.selected .mode-check { display: flex; }
+
+/* ========== Player Count ========== */
+.player-count-section { margin-top: 8px; }
+.count-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+.count-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  background: transparent;
+  color: var(--primary-light);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-user-select: none; user-select: none;
+}
+.count-btn:active { transform: scale(0.9); background: var(--primary); color: white; }
+.count-btn:disabled { opacity: 0.3; border-color: var(--text-secondary); color: var(--text-secondary); }
+.count-display {
+  font-size: 42px;
+  font-weight: 900;
+  min-width: 64px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--primary-light), var(--accent-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.count-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+/* ========== Role Config ========== */
+.role-config {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 16px;
+}
+.role-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.role-row:last-child { border: none; }
+.role-label { font-size: 14px; font-weight: 600; }
+.role-value {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700;
+  color: var(--primary-light);
+}
+.role-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-spy { background: var(--danger); }
+.dot-civilian { background: var(--primary); }
+.dot-blank { background: var(--accent-yellow); }
+
+/* ========== Buttons ========== */
+.btn-primary {
+  width: 100%;
+  padding: 18px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 20px rgba(108,92,231,0.4);
+  position: relative;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+}
+.btn-primary:active::after { width: 300px; height: 300px; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--primary-light);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  -webkit-user-select: none; user-select: none;
+}
+.btn-secondary:active { background: rgba(108,92,231,0.15); }
+
+.btn-danger {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--danger);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  -webkit-user-select: none; user-select: none;
+}
+.btn-danger:active { background: rgba(225,112,85,0.15); }
+
+.btn-success {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid var(--success);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--success);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  -webkit-user-select: none; user-select: none;
+}
+.btn-success:active { background: rgba(0,184,148,0.15); }
+
+.btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 24px; }
+
+/* ========== Bottom Bar (Fixed) ========== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg-dark) 60%, transparent);
+  z-index: 100;
+}
+.bottom-bar .btn-group { margin-top: 0; padding-top: 0; }
+
+/* ========== Deal Result View ========== */
+.deal-header {
+  text-align: center;
+  padding: 24px 0 16px;
+  flex-shrink: 0;
+}
+.deal-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.deal-header .word-pair-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.deal-status-bar {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 0 16px;
+  flex-wrap: wrap;
+}
+.status-chip {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.chip-spy { background: rgba(225,112,85,0.15); color: var(--danger); }
+.chip-civilian { background: rgba(108,92,231,0.15); color: var(--primary-light); }
+.chip-blank { background: rgba(255,234,167,0.15); color: var(--accent-yellow); }
+
+/* Card Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: 1;
+  align-content: start;
+  padding-bottom: 16px;
+}
+
+/* Flip Card Component */
+.flip-card {
+  perspective: 1000px;
+  height: 180px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform var(--flip-duration) cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.flip-card-front {
+  background: var(--bg-card-back);
+  box-shadow: var(--shadow-glow);
+  border: 2px solid rgba(162,155,254,0.3);
+}
+.flip-card-front .card-back-icon { font-size: 36px; margin-bottom: 8px; }
+.flip-card-front .card-back-text { font-size: 14px; font-weight: 600; opacity: 0.8; }
+.flip-card-front .player-num {
+  position: absolute;
+  top: 10px; left: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-glow);
+  border: 2px solid;
+}
+.card-type-spy .flip-card-back { border-color: var(--danger); background: linear-gradient(135deg, #2d1a1a, #1a1333); }
+.card-type-civilian .flip-card-back { border-color: var(--primary); background: linear-gradient(135deg, #1a1533, #1a1333); }
+.card-type-blank .flip-card-back { border-color: var(--accent-yellow); background: linear-gradient(135deg, #2d2a1a, #1a1333); }
+
+.flip-card-back .role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.badge-spy { background: rgba(225,112,85,0.2); color: var(--danger); }
+.badge-civilian { background: rgba(108,92,231,0.2); color: var(--primary-light); }
+.badge-blank { background: rgba(255,234,167,0.2); color: var(--accent-yellow); }
+
+.flip-card-back .card-word {
+  font-size: 26px;
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.3;
+}
+.card-word-spy { color: var(--danger); }
+.card-word-civilian { color: var(--primary-light); }
+.card-word-blank { color: var(--accent-yellow); }
+
+.flip-card-back .card-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Anti-peek blur for deal view */
+.flip-card.anti-peek .flip-card-back {
+  filter: blur(8px);
+  transition: filter 0.3s ease;
+}
+.flip-card.anti-peek.peeking .flip-card-back {
+  filter: blur(0);
+}
+
+/* Eliminated state */
+.flip-card.eliminated .flip-card-inner { opacity: 0.4; }
+.flip-card.eliminated { pointer-events: none; }
+.flip-card.eliminated .flip-card-front,
+.flip-card.eliminated .flip-card-back {
+  filter: grayscale(1);
+  border-style: dashed;
+}
+
+/* Pending verify state (highlighted for verification) */
+.flip-card.pending-verify .flip-card-front {
+  box-shadow: 0 0 20px rgba(255,234,167,0.6);
+  border-color: var(--accent-yellow);
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(255,234,167,0.4); }
+  50% { box-shadow: 0 0 25px rgba(255,234,167,0.7); }
+}
+
+/* Reveal All Animation */
+@keyframes flipAll {
+  0% { transform: rotateY(0); }
+  100% { transform: rotateY(180deg); }
+}
+.flip-card.reveal-animation .flip-card-inner {
+  animation: flipAll var(--flip-duration) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ========== PLAYING VIEW (Game In Progress) ========== */
+.playing-header {
+  text-align: center;
+  padding: 20px 0 12px;
+  flex-shrink: 0;
+}
+.playing-status-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.status-item {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.status-item strong {
+  color: var(--text-primary);
+}
+.status-round {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white !important;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Playing card grid - smaller cards */
+.playing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  flex: 1;
+  align-content: start;
+  padding-bottom: 16px;
+}
+.playing-grid .flip-card {
+  height: 110px;
+}
+.playing-grid .flip-card-front .card-back-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.playing-grid .flip-card-front .card-back-text {
+  font-size: 11px;
+}
+.playing-grid .flip-card-front .player-num {
+  font-size: 11px;
+  top: 6px; left: 8px;
+  padding: 1px 6px;
+}
+.playing-grid .flip-card-back .role-badge {
+  font-size: 9px;
+  padding: 2px 8px;
+  margin-bottom: 4px;
+}
+.playing-grid .flip-card-back .card-word {
+  font-size: 16px;
+}
+.playing-grid .flip-card.eliminated .flip-card-inner {
+  opacity: 0.35;
+}
+/* Eliminated overlay label on playing grid */
+.eliminated-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  z-index: 2;
+}
+
+/* Playing action buttons */
+.playing-actions {
+  display: flex;
+  gap: 10px;
+}
+.playing-actions .btn-flex {
+  flex: 1;
+  padding: 14px;
+  font-size: 15px;
+}
+
+/* ========== Vote Modal ========== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 300;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 340px;
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: modalIn 0.3s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.vote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vote-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(108,92,231,0.08);
+  border: 2px solid rgba(108,92,231,0.2);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-user-select: none; user-select: none;
+}
+.vote-option:active {
+  background: rgba(108,92,231,0.25);
+  border-color: var(--primary);
+  transform: scale(0.97);
+}
+.vote-option .vote-icon { font-size: 20px; }
+.modal-cancel {
+  margin-top: 16px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+.modal-cancel:active { background: rgba(255,255,255,0.1); }
+
+/* ========== Verify Result Toast ========== */
+.verify-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: var(--bg-card);
+  border: 2px solid;
+  border-radius: var(--radius);
+  padding: 24px 32px;
+  text-align: center;
+  z-index: 350;
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.verify-toast.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.verify-toast.spy-result {
+  border-color: var(--danger);
+  box-shadow: 0 20px 60px rgba(225,112,85,0.3);
+}
+.verify-toast.civilian-result {
+  border-color: var(--primary);
+  box-shadow: 0 20px 60px rgba(108,92,231,0.3);
+}
+.verify-toast .verify-icon { font-size: 48px; display: block; margin-bottom: 8px; }
+.verify-toast .verify-text {
+  font-size: 18px;
+  font-weight: 800;
+}
+.verify-toast.spy-result .verify-text { color: var(--danger); }
+.verify-toast.civilian-result .verify-text { color: var(--primary-light); }
+.verify-toast .verify-role {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ========== Game Over View ========== */
+.game-over-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 24px;
+}
+.game-result-icon { font-size: 80px; }
+.game-result-title { font-size: 32px; font-weight: 900; }
+.game-result-title.spy-win { color: var(--danger); }
+.game-result-title.civilian-win { color: var(--success); }
+.game-result-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 320px;
+}
+.result-summary {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.summary-row:last-child { border: none; }
+.summary-label { color: var(--text-secondary); }
+.summary-value { font-weight: 700; }
+
+/* Elimination log in game over */
+.elim-log {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.elim-log-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.elim-log-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.elim-log-entry .elim-role-spy { color: var(--danger); }
+.elim-log-entry .elim-role-civilian { color: var(--primary-light); }
+
+/* ========== Settings Drawer ========== */
+.settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.settings-overlay.active { display: block; }
+.settings-drawer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg-card);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px max(24px, env(safe-area-inset-bottom));
+  z-index: 201;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.settings-drawer.active { transform: translateY(0); }
+.drawer-handle {
+  width: 36px; height: 4px;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.drawer-title {
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.setting-group { margin-bottom: 24px; }
+.setting-group-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.setting-row:last-child { border: none; }
+.setting-label { font-size: 15px; font-weight: 500; }
+
+/* Toggle Switch */
+.toggle {
+  width: 48px; height: 28px;
+  background: var(--text-secondary);
+  border-radius: 14px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--primary); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 24px; height: 24px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.25s;
+}
+.toggle.on::after { transform: translateX(20px); }
+
+/* Slider */
+.slider-container { display: flex; align-items: center; gap: 12px; flex: 1; justify-content: flex-end; }
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  outline: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(108,92,231,0.4);
+}
+.slider-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-light);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Theme Options */
+.theme-options { display: flex; gap: 8px; }
+.theme-opt {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.theme-opt.selected { border-color: white; box-shadow: 0 0 8px rgba(255,255,255,0.3); }
+.theme-dark { background: #0f0a1e; }
+.theme-purple { background: #1a0a2e; }
+.theme-midnight { background: #0a0f1e; }
+
+/* ========== Action Bar (Deal page) ========== */
+.action-bar {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+}
+.action-bar .btn-flex { flex: 1; padding: 12px; font-size: 14px; }
+
+/* ========== Toast ========== */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-100%) translateY(-100px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  border: 1px solid rgba(108,92,231,0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ========== Confetti ========== */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 400;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  width: 10px; height: 10px;
+  top: -10px;
+  animation: confettiFall 3s ease-out forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* ========== Responsive tweaks ========== */
+@media (min-width: 480px) {
+  .cards-grid { gap: 16px; }
+  .flip-card { height: 200px; }
+  .flip-card-back .card-word { font-size: 30px; }
+  .playing-grid { grid-template-columns: repeat(4, 1fr); }
+  .playing-grid .flip-card { height: 130px; }
+}
+@media (min-width: 768px) {
+  .cards-grid { grid-template-columns: repeat(3, 1fr); max-width: 720px; margin: 0 auto; }
+  .flip-card { height: 220px; }
+  .playing-grid { grid-template-columns: repeat(5, 1fr); max-width: 720px; margin: 0 auto; }
+  .view { padding-left: 24px; padding-right: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ==================== VIEW: HOME ==================== -->
+<div id="view-home" class="view active">
+  <div class="header">
+    <span class="header-icon">🎭</span>
+    <h1>谁是卧底</h1>
+    <p>线下聚会 · 同屏发牌 · 一触即开</p>
+  </div>
+
+  <div class="mode-section">
+    <!-- Mode Selection -->
+    <div>
+      <div class="mode-label">选择模式</div>
+      <div class="mode-cards">
+        <div class="mode-card selected" data-mode="classic" onclick="selectMode('classic')">
+          <span class="mode-check">✓</span>
+          <span class="mode-icon">🔍</span>
+          <div class="mode-name">经典模式</div>
+          <div class="mode-desc">平民拿到词A<br/>卧底拿到近义词B</div>
+        </div>
+        <div class="mode-card" data-mode="blank" onclick="selectMode('blank')">
+          <span class="mode-check">✓</span>
+          <span class="mode-icon">🎭</span>
+          <div class="mode-name">白板模式</div>
+          <div class="mode-desc">一人无词（白板）<br/>其余都是词A</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Count -->
+    <div class="player-count-section">
+      <div class="mode-label">玩家人数</div>
+      <div class="count-selector">
+        <button class="count-btn" id="btn-minus" onclick="changeCount(-1)">−</button>
+        <span class="count-display" id="count-display">6</span>
+        <button class="count-btn" id="btn-plus" onclick="changeCount(1)">+</button>
+      </div>
+      <div class="count-hint" id="count-hint">推荐 4-12 人游戏</div>
+    </div>
+
+    <!-- Role Preview -->
+    <div class="role-config" id="role-config">
+      <div class="role-row">
+        <span class="role-label"><span class="role-dot dot-spy"></span> 卧底</span>
+        <span class="role-value" id="spy-count">1 人</span>
+      </div>
+      <div class="role-row">
+        <span class="role-label"><span class="role-dot dot-civilian"></span> 平民</span>
+        <span class="role-value" id="civilian-count">4 人</span>
+      </div>
+      <div class="role-row" id="blank-row" style="display:none">
+        <span class="role-label"><span class="role-dot dot-blank"></span> 白板</span>
+        <span class="role-value" id="blank-count">1 人</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="bottom-bar">
+    <div class="btn-group">
+      <button class="btn-primary" onclick="startGame()">🎴 发牌开始</button>
+      <button class="btn-secondary" onclick="openSettings()">⚙️ 设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VIEW: DEAL RESULT ==================== -->
+<div id="view-deal" class="view">
+  <div class="deal-header">
+    <h2 id="deal-title">请依次翻牌查看自己的词</h2>
+    <div class="word-pair-info" id="word-pair-info"></div>
+  </div>
+
+  <div class="deal-status-bar" id="deal-status-bar">
+    <span class="status-chip chip-spy" id="chip-spy">🔴 卧底 ×1</span>
+    <span class="status-chip chip-civilian" id="chip-civilian">🔵 平民 ×4</span>
+    <span class="status-chip chip-blank" id="chip-blank" style="display:none">🟡 白板 ×1</span>
+  </div>
+
+  <div class="cards-grid" id="cards-grid">
+    <!-- Cards generated by JS -->
+  </div>
+
+  <div class="bottom-bar">
+    <div class="btn-group">
+      <button class="btn-success" onclick="enterPlayingView()">✅ 都看好了，开始游戏</button>
+      <button class="btn-secondary" onclick="resetGame()">🔄 重新发牌</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VIEW: PLAYING (Game In Progress) ==================== -->
+<div id="view-playing" class="view">
+  <div class="playing-header">
+    <div class="playing-status-bar" id="playing-status-bar">
+      <span class="status-round" id="status-round">第 1 轮</span>
+      <span class="status-item">剩余 <strong id="status-alive">6</strong> 人</span>
+      <span class="status-item" style="color:var(--danger)">卧底 ?</span>
+      <span class="status-item" style="color:var(--primary-light)">平民 ?</span>
+    </div>
+  </div>
+
+  <div class="playing-grid" id="playing-grid">
+    <!-- Small player cards generated by JS -->
+  </div>
+
+  <div class="bottom-bar">
+    <div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:8px 0;">
+      👆 点击玩家卡片进行淘汰验牌
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VIEW: GAME OVER ==================== -->
+<div id="view-gameover" class="view">
+  <div class="game-over-content">
+    <div class="game-result-icon" id="result-icon">🎉</div>
+    <div class="game-result-title" id="result-title">游戏结束</div>
+    <div class="game-result-desc" id="result-desc">感谢游玩！</div>
+    <div class="result-summary" id="result-summary">
+      <div class="summary-row">
+        <span class="summary-label">模式</span>
+        <span class="summary-value" id="summary-mode">经典</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">人数</span>
+        <span class="summary-value" id="summary-players">6 人</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">总轮次</span>
+        <span class="summary-value" id="summary-rounds">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">词语</span>
+        <span class="summary-value" id="summary-words">— / —</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">卧底身份</span>
+        <span class="summary-value" id="summary-spy">P3</span>
+      </div>
+      <div class="elim-log" id="elim-log">
+        <div class="elim-log-title">📋 淘汰记录</div>
+        <div id="elim-log-entries"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <div class="btn-group">
+      <button class="btn-primary" onclick="resetGame()">🔄 再来一局</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.app -->
+
+<!-- ==================== ELIMINATE CONFIRM MODAL ==================== -->
+<div class="modal-overlay" id="eliminate-modal">
+  <div class="modal-box" style="max-width:300px;">
+    <div class="modal-title">确定淘汰？</div>
+    <div id="eliminate-preview" style="text-align:center;padding:16px 0;">
+      <!-- Card preview injected by JS -->
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="modal-cancel" style="flex:1;" onclick="closeEliminateModal()">取消</button>
+      <button id="btn-confirm-eliminate" class="btn-danger" style="flex:1;padding:12px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;" onclick="confirmEliminate()">确认淘汰</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VERIFY RESULT TOAST ==================== -->
+<div class="verify-toast" id="verify-toast">
+  <span class="verify-icon" id="verify-icon">🔍</span>
+  <div class="verify-text" id="verify-text">P3 是卧底！</div>
+  <div class="verify-role" id="verify-role">点击继续</div>
+</div>
+
+<!-- ==================== SETTINGS DRAWER ==================== -->
+<div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
+<div class="settings-drawer" id="settings-drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">⚙️ 设置</div>
+
+  <div class="setting-group">
+    <div class="setting-group-title">音效</div>
+    <div class="setting-row">
+      <span class="setting-label">翻牌音效</span>
+      <div class="toggle on" id="toggle-sound-flip" onclick="toggleSetting(this)"></div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">胜利音效</span>
+      <div class="toggle on" id="toggle-sound-win" onclick="toggleSetting(this)"></div>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <div class="setting-group-title">动画</div>
+    <div class="setting-row">
+      <span class="setting-label">翻牌速度</span>
+      <div class="slider-container">
+        <input type="range" class="slider" id="slider-flip-speed" min="200" max="1000" value="600" step="100" oninput="updateSlider(this, 'flip-speed-val')">
+        <span class="slider-value" id="flip-speed-val">600ms</span>
+      </div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">显示角色提示</span>
+      <div class="toggle on" id="toggle-show-role" onclick="toggleSetting(this)"></div>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <div class="setting-group-title">外观</div>
+    <div class="setting-row">
+      <span class="setting-label">主题色</span>
+      <div class="theme-options">
+        <div class="theme-opt theme-dark selected" data-theme="dark" onclick="selectTheme(this)"></div>
+        <div class="theme-opt theme-purple" data-theme="purple" onclick="selectTheme(this)"></div>
+        <div class="theme-opt theme-midnight" data-theme="midnight" onclick="selectTheme(this)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Confetti Container -->
+<div class="confetti-container" id="confetti-container"></div>
+
+<script>
+// =============== LOCAL WORD BANK (50+ pairs, fallback) ===============
+var LOCAL_WORD_PAIRS = [
+  // ===== 明星/网红对比 (5对) =====
+  { civilian: '杨幂', spy: '杨颖' },
+  { civilian: '赵丽颖', spy: '杨紫' },
+  { civilian: '薛之谦', spy: '李荣浩' },
+  { civilian: '毛不易', spy: '李健' },
+  { civilian: '李佳琦', spy: '薇娅' },
+
+  // ===== 食物相似品 (8对) =====
+  { civilian: '包子', spy: '饺子' },
+  { civilian: '回锅肉', spy: '红烧肉' },
+  { civilian: '汤圆', spy: '元宵' },
+  { civilian: '油条', spy: '春卷' },
+  { civilian: '粽子', spy: '烧麦' },
+  { civilian: '麻辣烫', spy: '冒菜' },
+  { civilian: '汉堡', spy: '三明治' },
+  { civilian: '酸奶', spy: '乳酸菌饮料' },
+
+  // ===== 游戏/APP 对比 (8对) =====
+  { civilian: '王者荣耀', spy: '英雄联盟' },
+  { civilian: '原神', spy: '崩坏：星穹铁道' },
+  { civilian: '开心消消乐', spy: '糖果传奇' },
+  { civilian: '抖音', spy: '快手' },
+  { civilian: '微信', spy: 'QQ' },
+  { civilian: '淘宝', spy: '拼多多' },
+  { civilian: '美团', spy: '饿了么' },
+  { civilian: '知乎', spy: '百度知道' },
+
+  // ===== 影视/动漫 (8对) =====
+  { civilian: '芝麻街', spy: '樱桃小丸子' },
+  { civilian: '孙悟空', spy: '变形金刚' },
+  { civilian: '葫芦娃', spy: '奥特曼' },
+  { civilian: '喜羊羊', spy: '熊出没' },
+  { civilian: '甄嬛传', spy: '延禧攻略' },
+  { civilian: '狂飙', spy: '扫黑风暴' },
+  { civilian: '复仇者联盟', spy: '正义联盟' },
+  { civilian: '千与千寻', spy: '龙猫' },
+
+  // ===== 生活用品易混淆 (8对) =====
+  { civilian: '保安', spy: '保镖' },
+  { civilian: '指甲刀', spy: '剪刀' },
+  { civilian: '洗面奶', spy: '防晒霜' },
+  { civilian: '高跟鞋', spy: '靴子' },
+  { civilian: '眼霜', spy: '面膜' },
+  { civilian: '充电宝', spy: '电池' },
+  { civilian: 'U盘', spy: '移动硬盘' },
+  { civilian: '路由器', spy: '猫(调制解调器)' },
+
+  // ===== 热梗/网络流行语 (8对) =====
+  { civilian: '神经病', spy: '精神病' },
+  { civilian: '初恋', spy: '暗恋' },
+  { civilian: '躺平', spy: '摆烂' },
+  { civilian: 'YYDS', spy: '永远的神' },
+  { civilian: '破防了', spy: 'emo了' },
+  { civilian: '显眼包', spy: '社牛' },
+  { civilian: '搭子', spy: '饭票' },
+  { civilian: 'Citywalk', spy: '街溜子' },
+
+  // ===== 职业角色 (5对) =====
+  { civilian: '高考', spy: '中考' },
+  { civilian: '班主任', spy: '辅导员' },
+  { civilian: '产品经理', spy: '项目经理' },
+  { civilian: '前端工程师', spy: '后端工程师' },
+  { civilian: 'CEO', spy: '老板' },
+
+  // ===== 运动项目 (5对) =====
+  { civilian: '乒乓球', spy: '羽毛球' },
+  { civilian: '跆拳道', spy: '空手道' },
+  { civilian: '滑板', spy: '轮滑' },
+  { civilian: '击剑', spy: ' fencing'.replace('fencing',' fencing') }, // placeholder fix below
+  { civilian: '瑜伽', spy: '普拉提' },
+];
+
+// Fix the fencing entry (was a workaround for potential encoding issues)
+LOCAL_WORD_PAIRS[44] = { civilian: '击剑', spy: '拳击' };
+
+// =============== LOAD WORDS FROM JSON ===============
+(function loadWordsJson() {
+  fetch('./words.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (Array.isArray(data) && data.length > 0) {
+        state.wordPairs = data;
+        console.log('[spy-undercover] words.json 加载成功，共 ' + data.length + ' 对词');
+      }
+    })
+    .catch(function() { console.log('[spy-undercover] words.json 加载失败，使用本地词库'); });
+})();
+
+// =============== STATE ===============
+var state = {
+  mode: 'classic',
+  playerCount: 6,
+  spyCount: 1,
+  blankCount: 0,
+  flippedCards: new Set(),
+  eliminatedCards: new Set(),
+  currentView: 'home',
+  wordPairs: LOCAL_WORD_PAIRS.slice(), // default to local
+  currentPair: null,
+  cards: [],
+  // New game flow state
+  round: 1,
+  eliminationLog: [],             // [{round, player, role, roleLabel}]
+  settings: {
+    soundFlip: true,
+    soundWin: true,
+    flipSpeed: 600,
+    showRole: true,
+    theme: 'dark',
+  }
+};
+
+// =============== NAVIGATION ===============
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById('view-' + viewId).classList.add('active');
+  state.currentView = viewId;
+  window.scrollTo(0, 0);
+}
+
+// =============== HOME: MODE SELECTION ===============
+function selectMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.mode-card').forEach(function(c) { c.classList.remove('selected'); });
+  document.querySelector('[data-mode="' + mode + '"]').classList.add('selected');
+
+  var blankRow = document.getElementById('blank-row');
+  if (mode === 'blank') {
+    blankRow.style.display = 'flex';
+    state.blankCount = 1;
+  } else {
+    blankRow.style.display = 'none';
+    state.blankCount = 0;
+  }
+  updateRolePreview();
+}
+
+// =============== HOME: PLAYER COUNT ===============
+function changeCount(delta) {
+  var newCount = state.playerCount + delta;
+  if (newCount < 4 || newCount > 12) return;
+  state.playerCount = newCount;
+
+  if (newCount <= 6) {
+    state.spyCount = 1;
+  } else if (newCount <= 9) {
+    state.spyCount = 2;
+  } else {
+    state.spyCount = 2;
+  }
+
+  document.getElementById('count-display').textContent = newCount;
+  document.getElementById('btn-minus').disabled = newCount <= 4;
+  document.getElementById('btn-plus').disabled = newCount >= 12;
+  updateRolePreview();
+}
+
+function updateRolePreview() {
+  var total = state.playerCount;
+  var spy = state.spyCount;
+  var blank = state.blankCount;
+  var civilian = total - spy - blank;
+
+  document.getElementById('spy-count').textContent = spy + ' 人';
+  document.getElementById('civilian-count').textContent = civilian + ' 人';
+  if (state.blankCount > 0) {
+    document.getElementById('blank-count').textContent = blank + ' 人';
+  }
+}
+
+// =============== UTILITIES ===============
+function shuffleArray(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+}
+
+// =============== REMOTE WORD FETCH ===============
+function fetchRemoteWords() {
+  // Non-blocking: load in background for next game, don't block current game
+  try {
+    // Use AbortController for 3s timeout
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, 3000);
+    fetch('https://api.spy-undercover.workers.dev/words', { signal: controller.signal })
+      .then(function(r) { 
+        clearTimeout(timer); 
+        if (!r.ok) throw new Error('HTTP ' + r.status); 
+        return r.json(); 
+      })
+      .then(function(data) {
+        if (Array.isArray(data) && data.length > 0) {
+          state.wordPairs = data;
+          console.log('[spy-undercover] 远程词库加载成功，共 ' + data.length + ' 对词（下局生效）');
+        }
+      })
+      .catch(function(err) {
+        clearTimeout(timer);
+        console.log('[spy-undercover] 远程词库获取失败，使用本地词库 (' + LOCAL_WORD_PAIRS.length + ' 对)');
+      });
+  } catch(e) {
+    console.log('[spy-undercover] fetch 不支持，使用本地词库');
+  }
+  // Return resolved promise immediately - never block
+  return Promise.resolve();
+}
+
+// =============== GAME LOGIC ===============
+function startGame() {
+  // Reset game flow state
+  state.round = 1;
+  state.eliminationLog = [];
+
+  // Try remote words first, then deal
+  fetchRemoteWords().finally(function() { dealCards(); });
+}
+
+function dealCards() {
+  var pairIdx = Math.floor(Math.random() * state.wordPairs.length);
+  var pair = state.wordPairs[pairIdx];
+  state.currentPair = pair;
+
+  var total = state.playerCount;
+  var spy = state.spyCount;
+  var blank = state.blankCount;
+  var civilian = total - spy - blank;
+
+  var roles = [];
+  for (var i = 0; i < spy; i++) roles.push('spy');
+  for (var i = 0; i < civilian; i++) roles.push('civilian');
+  for (var i = 0; i < blank; i++) roles.push('blank');
+  shuffleArray(roles);
+
+  state.cards = roles.map(function(role, idx) {
+    return {
+      playerIndex: idx + 1,
+      role: role,
+      word: role === 'spy' ? pair.spy : (role === 'blank' ? null : pair.civilian),
+      type: role
+    };
+  });
+
+  state.flippedCards = new Set();
+  state.eliminatedCards = new Set();
+
+  document.getElementById('word-pair-info').textContent =
+    '本局词对：' + pair.civilian + ' / ' + pair.spy;
+  document.getElementById('chip-spy').textContent = '\uD83D\uDD34 卧底 \xD7' + spy;
+  document.getElementById('chip-civilian').textContent = '\uD83D\uDD35 平民 \xD7' + civilian;
+  var chipBlank = document.getElementById('chip-blank');
+  if (blank > 0) {
+    chipBlank.style.display = '';
+    chipBlank.textContent = '\uD83D\uDFE1 白板 \xD7' + blank;
+  } else {
+    chipBlank.style.display = 'none';
+  }
+
+  renderDealCards();
+  showView('deal');
+  showToast('\uD83CDCFE 牌已发好，点击卡片查看自己的词（防偷看模式）');
+}
+
+// =============== DEAL VIEW: Render with anti-peek ===============
+function renderDealCards() {
+  var grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+
+  state.cards.forEach(function(card, idx) {
+    var div = document.createElement('div');
+    div.className = 'flip-card card-type-' + card.type + ' anti-peek';
+    div.dataset.index = idx;
+    // Anti-peek: click to briefly reveal, then blur again
+    div.onclick = function() { antiPeekFlip(idx); };
+
+    var roleBadgeClass = 'badge-' + card.type;
+    var roleLabel = card.role === 'spy' ? '卧底' : (card.role === 'blank' ? '白板' : '平民');
+    var wordClass = 'card-word-' + card.type;
+    var wordText = card.role === 'blank' ? '\uD83C\ADF5 白板' : (card.word || '???');
+    var wordHint = card.role === 'blank' ? '你没有词语，要假装知道' : '';
+
+    div.innerHTML =
+      '<div class="flip-card-inner">' +
+        '<div class="flip-card-front">' +
+          '<span class="player-num">P' + card.playerIndex + '</span>' +
+          '<span class="card-back-icon">\u2753</span>' +
+          '<span class="card-back-text">点击看牌</span>' +
+        '</div>' +
+        '<div class="flip-card-back">' +
+          (state.settings.showRole ? '<span class="role-badge ' + roleBadgeClass + '">' + roleLabel + '</span>' : '') +
+          '<span class="card-word ' + wordClass + '">' + wordText + '</span>' +
+          (wordHint ? '<span class="card-hint">' + wordHint + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    grid.appendChild(div);
+  });
+}
+
+// Anti-peek flip: show briefly, auto-blur after delay
+function antiPeekFlip(index) {
+  var cardEls = document.querySelectorAll('#cards-grid .flip-card');
+  var cardEl = cardEls[index];
+  if (!cardEl) return;
+
+  // Toggle flip
+  var isCurrentlyFlipped = cardEl.classList.contains('flipped');
+
+  if (isCurrentlyFlipped) {
+    cardEl.classList.remove('flipped', 'peeking');
+    state.flippedCards.delete(index);
+  } else {
+    cardEl.classList.add('flipped', 'peeking');
+    state.flippedCards.add(index);
+    if (state.settings.soundFlip) playFlipSound();
+
+    // Auto-blur after 3 seconds
+    clearTimeout(cardEl._peekTimer);
+    cardEl._peekTimer = setTimeout(function() {
+      cardEl.classList.remove('peeking');
+      // Keep flipped but blurred
+    }, 3000);
+  }
+}
+
+// =============== ENTER PLAYING VIEW ===============
+function enterPlayingView() {
+  // Reset all flips when entering playing view
+  state.flippedCards = new Set();
+  renderPlayingCards();
+  updatePlayingStatusBar();
+  showView('playing');
+  showToast('\uD83C\uDFAE 第 ' + state.round + ' 轮开始！');
+}
+
+// =============== PLAYING VIEW: Render small grid ===============
+function renderPlayingCards() {
+  var grid = document.getElementById('playing-grid');
+  grid.innerHTML = '';
+
+  state.cards.forEach(function(card, idx) {
+    var isEliminated = state.eliminatedCards.has(idx);
+
+    var div = document.createElement('div');
+    var classes = 'flip-card card-type-' + card.type;
+    if (isEliminated) classes += ' eliminated';
+    div.className = classes;
+    div.dataset.index = idx;
+
+    var roleBadgeClass = 'badge-' + card.type;
+    var roleLabel = card.role === 'spy' ? '卧底' : (card.role === 'blank' ? '白板' : '平民');
+    var wordClass = 'card-word-' + card.type;
+    var wordText = card.role === 'blank' ? '\uD83C\ADF5 白板' : (card.word || '???');
+
+    var innerHTML =
+      '<div class="flip-card-inner">' +
+        '<div class="flip-card-front">' +
+          '<span class="player-num">P' + card.playerIndex + '</span>' +
+          '<span class="card-back-icon">' + (isEliminated ? '\uD83D\uDD34' : '\u2753') + '</span>' +
+          '<span class="card-back-text">' + (isEliminated ? '已出局' : '在场') + '</span>' +
+          (isEliminated ? '<div class="eliminated-overlay">\u2717 已出局</div>' : '') +
+        '</div>' +
+        '<div class="flip-card-back">' +
+          (state.settings.showRole ? '<span class="role-badge ' + roleBadgeClass + '">' + roleLabel + '</span>' : '') +
+          '<span class="card-word ' + wordClass + '">' + wordText + '</span>' +
+        '</div>' +
+      '</div>';
+
+    div.innerHTML = innerHTML;
+
+    // Make alive cards clickable for elimination
+    if (!isEliminated) {
+      div.style.cursor = 'pointer';
+      div.onclick = (function(i) { return function(e) {
+        e.stopPropagation();
+        openEliminateModal(i);
+      }; })(idx);
+    }
+
+    grid.appendChild(div);
+  });
+}
+
+// =============== PLAYING STATUS BAR ===============
+function updatePlayingStatusBar() {
+  var aliveCount = 0;
+  var aliveSpy = 0;
+  var aliveCivilian = 0;
+
+  state.cards.forEach(function(c, i) {
+    if (state.eliminatedCards.has(i)) return;
+    aliveCount++;
+    if (c.role === 'spy') aliveSpy++;
+    else aliveCivilian++;
+  });
+
+  document.getElementById('status-round').textContent = '第 ' + state.round + ' 轮';
+  document.getElementById('status-alive').textContent = aliveCount;
+
+  // Update spy/civilian counts in status bar (hide exact numbers for mystery)
+  var statusBar = document.getElementById('playing-status-bar');
+  var chips = statusBar.querySelectorAll('.status-item');
+  if (chips.length >= 2) {
+    chips[1].innerHTML = '卧底 <strong>?</strong>';
+    chips[2].innerHTML = '平民 <strong>?</strong>';
+  }
+}
+
+// =============== ELIMINATE CONFIRM MODAL (card-click flow) ===============
+var _pendingEliminateIndex = null;
+
+function openEliminateModal(index) {
+  if (state.eliminatedCards.has(index)) return;
+  _pendingEliminateIndex = index;
+  var card = state.cards[index];
+
+  // Build card preview
+  var preview = document.getElementById('eliminate-preview');
+  preview.innerHTML =
+    '<div style="font-size:32px;font-weight:900;color:var(--primary-light);">P' + card.playerIndex + '</div>' +
+    '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">号玩家</div>' +
+    '<div style="margin-top:12px;width:60px;height:80px;border-radius:10px;background:linear-gradient(135deg,#6C5CE7,#a29bfe);margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 15px rgba(108,92,231,0.3);">\u2753</div>';
+
+  document.getElementById('eliminate-modal').classList.add('active');
+}
+
+function closeEliminateModal() {
+  document.getElementById('eliminate-modal').classList.remove('active');
+  _pendingEliminateIndex = null;
+}
+
+function confirmEliminate() {
+  if (_pendingEliminateIndex === null) return;
+  var idx = _pendingEliminateIndex;
+  _pendingEliminateIndex = null;
+  closeEliminateModal();
+
+  var card = state.cards[idx];
+
+  // Flip the card with animation
+  var cardEls = document.querySelectorAll('#playing-grid .flip-card');
+  var cardEl = cardEls[idx];
+  if (cardEl) {
+    cardEl.classList.add('flipped');
+    if (state.settings.soundFlip) playFlipSound();
+  }
+
+  // Show verify result toast
+  var isSpy = card.role === 'spy';
+  var toastEl = document.getElementById('verify-toast');
+  document.getElementById('verify-icon').textContent = isSpy ? '\uD83D\uDD75\uFE0F' : '\uD83D\uDC64';
+  document.getElementById('verify-text').textContent = 'P' + (idx + 1) + (isSpy ? ' 是 \uD83D\uDD75\uFE0F 卧底！' : ' 是 \uD83D\uDC64 平民');
+  document.getElementById('verify-role').textContent = isSpy ? '卧底被揪出来了' : '误伤了一位平民';
+
+  toastEl.className = 'verify-toast show ' + (isSpy ? 'spy-result' : 'civilian-result');
+
+  // Log this elimination
+  state.eliminationLog.push({
+    round: state.round,
+    player: 'P' + (idx + 1),
+    role: card.role,
+    roleLabel: isSpy ? '卧底' : '平民'
+  });
+
+  // Eliminate
+  state.eliminatedCards.add(idx);
+
+  // Auto-dismiss after delay, then check win condition
+  setTimeout(function() {
+    toastEl.classList.remove('show');
+
+    var result = checkWinCondition();
+
+    if (result === 'civilian_win' || result === 'spy_win') {
+      setTimeout(function() { showGameOver(result); }, 800);
+    } else {
+      state.round++;
+      updatePlayingStatusBar();
+      renderPlayingCards();
+      showToast('\uD83C\uDFAE 进入第 ' + state.round + ' 轮！');
+    }
+  }, 2200);
+}
+
+// =============== WIN CONDITION ===============
+function checkWinCondition() {
+  var aliveSpy = 0;
+  var aliveCivilian = 0;
+
+  state.cards.forEach(function(c, idx) {
+    if (state.eliminatedCards.has(idx)) return;
+    if (c.role === 'spy') aliveSpy++;
+    else aliveCivilian++;
+  });
+
+  if (aliveSpy === 0) return 'civilian_win';
+  if (aliveCivilian <= aliveSpy) return 'spy_win';
+  return 'continue';
+}
+
+// =============== GAME OVER ===============
+function showGameOver(result) {
+  var spyWin = (result === 'spy_win');
+
+  document.getElementById('result-icon').textContent = spyWin ? '\uD83D\uDD75\uFE0F' : '\uD83C\uDF89';
+  var titleEl = document.getElementById('result-title');
+  titleEl.textContent = spyWin ? '卧底获胜！' : '平民获胜！';
+  titleEl.className = 'game-result-title ' + (spyWin ? 'spy-win' : 'civilian-win');
+
+  document.getElementById('result-desc').textContent = spyWin
+    ? '卧底成功隐藏身份，混入了平民阵营！'
+    : '所有卧底已被揪出，正义战胜邪恶！';
+
+  document.getElementById('summary-mode').textContent = state.mode === 'classic' ? '经典模式' : '白板模式';
+  document.getElementById('summary-players').textContent = state.playerCount + ' 人';
+  document.getElementById('summary-rounds').textContent = state.round + ' 轮';
+
+  var wordsEl = document.getElementById('summary-words');
+  if (state.currentPair) {
+    wordsEl.textContent = state.currentPair.civilian + ' / ' + state.currentPair.spy;
+  } else {
+    wordsEl.textContent = '\u2014 / \u2014';
+  }
+
+  var spyPlayers = state.cards
+    .filter(function(c) { return c.role === 'spy'; })
+    .map(function(c) { return 'P' + c.playerIndex; })
+    .join(', ');
+  document.getElementById('summary-spy').textContent = spyPlayers || '\u2014';
+
+  // Render elimination log
+  var logEntries = document.getElementById('elim-log-entries');
+  logEntries.innerHTML = '';
+  if (state.eliminationLog.length === 0) {
+    logEntries.innerHTML = '<div style="font-size:13px;color:var(--text-secondary)">暂无淘汰记录</div>';
+  } else {
+    state.eliminationLog.forEach(function(entry) {
+      var div = document.createElement('div');
+      div.className = 'elim-log-entry';
+      var roleClass = entry.role === 'spy' ? 'elim-role-spy' : 'elim-role-civilian';
+      div.innerHTML = '<span>R' + entry.round + ' · ' + entry.player + '</span><span class="' + roleClass + '">' + entry.roleLabel + '</span>';
+      logEntries.appendChild(div);
+    });
+  }
+
+  showView('gameover');
+
+  if (state.settings.soundWin) {
+    fireConfetti();
+  }
+}
+
+// =============== RESET ===============
+function resetGame() {
+  state.flippedCards = new Set();
+  state.eliminatedCards = new Set();
+  state.cards = [];
+  state.round = 1;
+  state.eliminationLog = [];
+  showView('home');
+}
+
+// =============== SETTINGS ===============
+function openSettings() {
+  document.getElementById('settings-overlay').classList.add('active');
+  document.getElementById('settings-drawer').classList.add('active');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('active');
+  document.getElementById('settings-drawer').classList.remove('active');
+}
+
+function toggleSetting(el) {
+  el.classList.toggle('on');
+  var id = el.id;
+  if (id === 'toggle-sound-flip') state.settings.soundFlip = el.classList.contains('on');
+  if (id === 'toggle-sound-win') state.settings.soundWin = el.classList.contains('on');
+  if (id === 'toggle-show-role') state.settings.showRole = el.classList.contains('on');
+}
+
+function updateSlider(slider, valueId) {
+  var val = slider.value;
+  document.getElementById(valueId).textContent = val + 'ms';
+  state.settings.flipSpeed = parseInt(val);
+  document.documentElement.style.setProperty('--flip-duration', val + 'ms');
+}
+
+function selectTheme(el) {
+  document.querySelectorAll('.theme-opt').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  state.settings.theme = el.dataset.theme;
+  showToast('\uD83C\uDFA8 主题已切换：' + el.dataset.theme);
+}
+
+// =============== TOAST & EFFECTS ===============
+function showToast(msg) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(function() { toast.classList.remove('show'); }, 2200);
+}
+
+function playFlipSound() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 800;
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+function fireConfetti() {
+  var container = document.getElementById('confetti-container');
+  container.innerHTML = '';
+  var colors = ['#6C5CE7','#a29bfe','#00cec9','#fd79a8','#ffeaa7','#00b894'];
+  for (var i = 0; i < 50; i++) {
+    var piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.width = (Math.random() * 8 + 5) + 'px';
+    piece.style.height = (Math.random() * 8 + 5) + 'px';
+    piece.style.animationDelay = (Math.random() * 1) + 's';
+    container.appendChild(piece);
+  }
+  setTimeout(function() { container.innerHTML = ''; }, 4000);
+}
+
+// =============== INIT ===============
+document.getElementById('btn-minus').disabled = true;
+updateRolePreview();
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (state.currentView === 'deal') {
+    if (e.key === 'Enter') { e.preventDefault(); enterPlayingView(); }
+    if (e.key === 'Escape') { resetGame(); }
+  }
+  if (state.currentView === 'playing') {
+    if (e.key === 'Escape') { resetGame(); }
+  }
+});
+</script>
+</body>
+</html>
